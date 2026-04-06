@@ -16,12 +16,13 @@ def fetch_html(urls):
         )
         for url in urls:
             page = context.new_page()
-            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            page.goto(url, wait_until="networkidle", timeout=60000)
 
+            page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=20000)
             page.get_by_text("Gas Station", exact=True).click()
 
             page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=20000)
-            page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=15000)
+            page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=20000)
 
             results.append(page.content())
             page.close()
