@@ -1,33 +1,46 @@
-from playwright.sync_api import sync_playwright
+import asyncio
+import os
+
+from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
 
-def fetch_html(urls):
-    if isinstance(urls, str):
-        urls = [urls]
-    results = []
-    with sync_playwright() as p:
-        browser = p.firefox.launch(headless=True)
-        context = browser.new_context(
+async def _fetch_page(browser, sem, url):
+    async with sem:
+        context = await browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) "
                 "Gecko/20100101 Firefox/124.0"
             )
         )
-        for url in urls:
-            page = context.new_page()
-            page.goto(url, wait_until="networkidle", timeout=60000)
+        try:
+            page = await context.new_page()
+            await page.goto(url, wait_until="networkidle", timeout=60000)
+            await page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=30000)
+            await page.get_by_text("Gas Station", exact=True).click()
+            await page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=30000)
+            await page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=30000)
+            html = await page.content()
+            return html
+        finally:
+            await context.close()
 
-            page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=20000)
-            page.get_by_text("Gas Station", exact=True).click()
 
-            page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=20000)
-            page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=20000)
-
-            results.append(page.content())
-            page.close()
-        browser.close()
+async def _fetch_all(urls):
+    async with async_playwright() as p:
+        headless = os.environ.get("HEADLESS", "true").lower() != "false"
+        browser = await p.firefox.launch(headless=headless)
+        sem = asyncio.Semaphore(5)
+        tasks = [_fetch_page(browser, sem, url) for url in urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await browser.close()
     return results
+
+
+def fetch_html(urls):
+    if isinstance(urls, str):
+        urls = [urls]
+    return asyncio.run(_fetch_all(urls))
 
 
 def get_price(html, fuel_type):

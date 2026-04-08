@@ -10,11 +10,27 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 URLS = [
+    # SoCal
     "https://www.costco.com/w/-/ca/alhambra/428",
     "https://www.costco.com/w/-/ca/inglewood/769",
     "https://www.costco.com/w/-/ca/marina-del-rey/479",
-    "https://www.costco.com/w/-/ca/burbank/677",
-    "https://www.costco.com/w/-/ca/monterey-park/1318"
+    # "https://www.costco.com/w/-/ca/burbank/677",
+    # "https://www.costco.com/w/-/ca/monterey-park/1318",
+
+    # North Jersey
+    # "https://www.costco.com/w/-/nj/east-hanover/244",
+    "https://www.costco.com/w/-/nj/wharton/315",
+    "https://www.costco.com/w/-/nj/wayne/1177",
+    "https://www.costco.com/w/-/nj/edison/323",
+    # "https://www.costco.com/w/-/nj/union/320",
+
+    # DFW
+    "https://www.costco.com/w/-/tx/dallas/1266",
+    "https://www.costco.com/w/-/tx/frisco/1097",
+    "https://www.costco.com/w/-/tx/mckinney/1284"
+    # ,
+    # "https://www.costco.com/w/-/tx/plano/664",
+    # "https://www.costco.com/w/-/tx/arlington/668"
 ]
 
 
@@ -29,8 +45,13 @@ def scrape_all(urls):
             "location": url.split("/")[-2],
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        regular_rows.append({**base, "price": get_regular_price(html)})
-        premium_rows.append({**base, "price": get_premium_price(html)})
+        if isinstance(html, Exception):
+            print(f"WARNING: failed to fetch {url}: {html}")
+            regular_rows.append({**base, "price": None})
+            premium_rows.append({**base, "price": None})
+        else:
+            regular_rows.append({**base, "price": get_regular_price(html)})
+            premium_rows.append({**base, "price": get_premium_price(html)})
     return regular_rows, premium_rows
 
 
