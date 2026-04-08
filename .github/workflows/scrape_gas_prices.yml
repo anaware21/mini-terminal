@@ -15,14 +15,27 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: pip install playwright beautifulsoup4 python-dotenv supabase
 
+      - name: Cache Playwright Firefox
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}
+
       - name: Install Firefox
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           playwright install firefox
           playwright install-deps firefox
+
+      - name: Install Firefox system deps (cached browser)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: playwright install-deps firefox
 
       - name: Run scraper and upload
         env:
