@@ -5,35 +5,34 @@ from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
 
-async def _fetch_page(browser, url):
-    context = await browser.new_context(
-        user_agent=(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) "
-            "Gecko/20100101 Firefox/124.0"
+async def _fetch_page(browser, sem, url):
+    async with sem:
+        context = await browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) "
+                "Gecko/20100101 Firefox/124.0"
+            )
         )
-    )
-    page = await context.new_page()
-    await page.goto(url, wait_until="networkidle", timeout=60000)
-    await page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=20000)
-    await page.get_by_text("Gas Station", exact=True).click()
-    await page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=20000)
-    await page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=20000)
-    html = await page.content()
-    await context.close()
-    return html
+        try:
+            page = await context.new_page()
+            await page.goto(url, wait_until="networkidle", timeout=60000)
+            await page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=30000)
+            await page.get_by_text("Gas Station", exact=True).click()
+            await page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=30000)
+            await page.get_by_text("Regular", exact=True).wait_for(state="visible", timeout=30000)
+            html = await page.content()
+            return html
+        finally:
+            await context.close()
 
 
 async def _fetch_all(urls):
     async with async_playwright() as p:
         headless = os.environ.get("HEADLESS", "true").lower() != "false"
         browser = await p.firefox.launch(headless=headless)
-        sem = asyncio.Semaphore(3)
-
-        async def fetch_with_sem(url):
-            async with sem:
-                return await _fetch_page(browser, url)
-
-        results = await asyncio.gather(*[fetch_with_sem(url) for url in urls])
+        sem = asyncio.Semaphore(5)
+        tasks = [_fetch_page(browser, sem, url) for url in urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         await browser.close()
     return results
 

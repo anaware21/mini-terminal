@@ -42,8 +42,13 @@ def scrape_all(urls):
             "location": url.split("/")[-2],
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        regular_rows.append({**base, "price": get_regular_price(html)})
-        premium_rows.append({**base, "price": get_premium_price(html)})
+        if isinstance(html, Exception):
+            print(f"WARNING: failed to fetch {url}: {html}")
+            regular_rows.append({**base, "price": None})
+            premium_rows.append({**base, "price": None})
+        else:
+            regular_rows.append({**base, "price": get_regular_price(html)})
+            premium_rows.append({**base, "price": get_premium_price(html)})
     return regular_rows, premium_rows
 
 
