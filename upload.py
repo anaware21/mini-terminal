@@ -14,7 +14,13 @@ URLS = [
     "https://www.costco.com/w/-/ca/inglewood/769",
     "https://www.costco.com/w/-/ca/marina-del-rey/479",
     "https://www.costco.com/w/-/ca/burbank/677",
-    "https://www.costco.com/w/-/ca/monterey-park/1318"
+    "https://www.costco.com/w/-/ca/monterey-park/1318",
+    "https://www.costco.com/w/-/nj/wharton/315",
+    "https://www.costco.com/w/-/nj/wayne/1177",
+    "https://www.costco.com/w/-/nj/edison/323",
+    "https://www.costco.com/w/-/tx/dallas/1266",
+    "https://www.costco.com/w/-/tx/frisco/1097",
+    "https://www.costco.com/w/-/tx/mckinney/1284"
 ]
 
 
