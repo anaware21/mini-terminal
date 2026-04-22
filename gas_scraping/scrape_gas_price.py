@@ -19,7 +19,7 @@ async def _fetch_page(browser, sem, url):
             await page.get_by_text("Gas Station", exact=True).wait_for(state="visible", timeout=30000)
             await page.get_by_text("Gas Station", exact=True).click()
             await page.wait_for_selector('[data-testid="gas-station"] .skeleton-wrapper', state="detached", timeout=30000)
-            await page.locator('[data-testid="gas-station"] dl:not([data-testid]) div span').first.wait_for(state="visible", timeout=30000)
+            await page.locator('[data-testid="gas-station"] dl:not([data-testid]) div span').first.wait_for(state="attached", timeout=30000)
             html = await page.content()
             return html
         finally:
