@@ -42,7 +42,7 @@ def scrape_all(urls):
     premium_rows = []
     for url, html in zip(urls, html_pages):
         base = {
-            "date": datetime.now(timezone.utc).date().isoformat(),
+            "date": datetime.now(ZoneInfo("America/New_York")).date().isoformat(),
             "url": url,
             "location": url.split("/")[-2],
             "created_at": datetime.now(timezone.utc).isoformat(),
