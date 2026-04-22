@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from supabase import create_client
@@ -55,8 +56,7 @@ def scrape_all(urls):
     return regular_rows, premium_rows
 
 
-def upload(regular_rows, premium_rows):
-    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+def _do_upload(client, regular_rows, premium_rows):
     client.table("costco_reg_gas_by_loc").insert(regular_rows).execute()
     client.table("costco_prm_gas_by_loc").insert(premium_rows).execute()
 
@@ -69,6 +69,29 @@ def upload(regular_rows, premium_rows):
     }).execute()
 
 
+def upload(regular_rows, premium_rows, timeout=120, retry_delay=5):
+    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    deadline = time.monotonic() + timeout
+    last_error = None
+    attempt = 0
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        try:
+            _do_upload(client, regular_rows, premium_rows)
+            return None
+        except Exception as e:
+            last_error = e
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            wait = min(retry_delay, remaining)
+            print(f"Upload attempt {attempt} failed: {e}. Retrying in {wait:.1f}s...")
+            time.sleep(wait)
+
+    return last_error
+
+
 if __name__ == "__main__":
     regular_rows, premium_rows = scrape_all(URLS)
     print("Regular:")
@@ -77,5 +100,8 @@ if __name__ == "__main__":
     print("Premium:")
     for r in premium_rows:
         print(f"  {r}")
-    upload(regular_rows, premium_rows)
-    print("Uploaded successfully.")
+    error = upload(regular_rows, premium_rows)
+    if error:
+        print(f"Upload failed after 2 minutes: {error}")
+    else:
+        print("Uploaded successfully.")

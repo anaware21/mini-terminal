@@ -1,4 +1,5 @@
-Code to
+Building a Bloomberg terminal style tool to track:
 
-1) scrape gas data from certain costcos
-2) format and upload them to supabase
+1. Gas (Prices at pumps)
+2. Oil (per barrel cost)
+3. Markets (indexes)
