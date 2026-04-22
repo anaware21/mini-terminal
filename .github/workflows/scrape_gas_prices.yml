@@ -2,7 +2,7 @@ name: Scrape Gas Prices
 
 on:
   schedule:
-    - cron: '0 17 * * *'  # daily at 9am PST (UTC-8)
+    - cron: '0 17 * * *'  # daily at noon EST (UTC-5)
   workflow_dispatch:       # allows manual trigger
 
 jobs:

@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from supabase import create_client
 from scrape_gas_price import fetch_html, get_regular_price, get_premium_price
@@ -63,7 +64,7 @@ def _do_upload(client, regular_rows, premium_rows):
     reg_prices = [r["price"] for r in regular_rows if r["price"] is not None]
     prm_prices = [r["price"] for r in premium_rows if r["price"] is not None]
     client.table("costco_daily_avg").insert({
-        "date": datetime.now(timezone.utc).date().isoformat(),
+        "date": datetime.now(ZoneInfo("America/New_York")).date().isoformat(),
         "avg_reg_price": sum(reg_prices) / len(reg_prices) if reg_prices else None,
         "avg_prm_price": sum(prm_prices) / len(prm_prices) if prm_prices else None,
     }).execute()
