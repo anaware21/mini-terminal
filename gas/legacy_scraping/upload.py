@@ -1,0 +1,101 @@
+import os
+import time
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+from dotenv import load_dotenv
+from supabase import create_client
+from gas.legacy_scraping.scrape_gas_price import fetch_html, get_regular_price, get_premium_price
+
+load_dotenv()
+
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+URLS = [
+    # "https://www.costco.com/w/-/ca/burbank/677",
+    # "https://www.costco.com/w/-/ca/monterey-park/1318",
+    # "https://www.costco.com/w/-/nj/east-hanover/244",
+    # "https://www.costco.com/w/-/nj/union/320",
+    # "https://www.costco.com/w/-/tx/plano/664",
+    # "https://www.costco.com/w/-/tx/arlington/668",
+    # "https://www.costco.com/w/-/ca/marina-del-rey/479",
+    # "https://www.costco.com/w/-/nj/edison/323",
+    # "https://www.costco.com/w/-/tx/mckinney/1284"
+    "https://www.costco.com/w/-/ca/alhambra/428",
+    "https://www.costco.com/w/-/ca/inglewood/769",
+    "https://www.costco.com/w/-/nj/wharton/315",
+    "https://www.costco.com/w/-/nj/wayne/1177",
+    "https://www.costco.com/w/-/tx/dallas/1266",
+    "https://www.costco.com/w/-/tx/frisco/1097"
+]
+
+
+def scrape_all(urls):
+    results, failed = fetch_html(urls)
+    for url in failed:
+        print(f"WARNING: permanently failed to fetch {url}")
+    regular_rows = []
+    premium_rows = []
+    for url in urls:
+        html = results.get(url)
+        base = {
+            "date": datetime.now(ZoneInfo("America/New_York")).date().isoformat(),
+            "url": url,
+            "location": url.split("/")[-2],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        regular_rows.append({**base, "price": get_regular_price(html) if html else None})
+        premium_rows.append({**base, "price": get_premium_price(html) if html else None})
+    return regular_rows, premium_rows
+
+
+def do_upload(client, regular_rows, premium_rows):
+    client.table("costco_reg_gas_by_loc").insert(regular_rows).execute()
+    client.table("costco_prm_gas_by_loc").insert(premium_rows).execute()
+
+    reg_prices = [r["price"] for r in regular_rows if r["price"] is not None]
+    prm_prices = [r["price"] for r in premium_rows if r["price"] is not None]
+    client.table("costco_daily_avg").insert({
+        "date": datetime.now(ZoneInfo("America/New_York")).date().isoformat(),
+        "avg_reg_price": sum(reg_prices) / len(reg_prices) if reg_prices else None,
+        "avg_prm_price": sum(prm_prices) / len(prm_prices) if prm_prices else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }).execute()
+
+
+def upload(regular_rows, premium_rows, timeout=120, retry_delay=5):
+    client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    deadline = time.monotonic() + timeout
+    last_error = None
+    attempt = 0
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        try:
+            do_upload(client, regular_rows, premium_rows)
+            return None
+        except Exception as e:
+            last_error = e
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            wait = min(retry_delay, remaining)
+            print(f"Upload attempt {attempt} failed: {e}. Retrying in {wait:.1f}s...")
+            time.sleep(wait)
+
+    return last_error
+
+
+if __name__ == "__main__":
+    regular_rows, premium_rows = scrape_all(URLS)
+    print("Regular:")
+    for r in regular_rows:
+        print(f"  {r}")
+    print("Premium:")
+    for r in premium_rows:
+        print(f"  {r}")
+    error = upload(regular_rows, premium_rows)
+    if error:
+        print(f"Upload failed after 2 minutes: {error}")
+    else:
+        print("Uploaded successfully.")
