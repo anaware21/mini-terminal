@@ -34,6 +34,20 @@ WAREHOUSES = {
     "mckinney": 1284,
     "plano": 664,
     "arlington": 668,
+
+    # Chicago
+    "chicago": 380,
+    "chicago-south-loop": 1107,
+    "niles": 383,
+    "north-riverside": 1153,
+    "melrose-park": 1085,
+
+    # SeaTac
+    "seattle": 1,
+    "kirkland": 8,
+    "redmond": 1225,
+    "shoreline": 106,
+    "woodinville": 747,
 }
 
 
