@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 from supabase import create_client
-from gas.legacy_scraping.scrape_gas_price import fetch_html, get_regular_price, get_premium_price
+from data.gas.legacy_scraping.scrape_gas_price import fetch_html, get_regular_price, get_premium_price
 
 load_dotenv()
 
