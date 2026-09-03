@@ -11,6 +11,14 @@ load_dotenv()
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
+# Manual (workflow_dispatch) runs set TABLE_PREFIX=test_ so they write to the
+# test tables. The daily cron leaves it unset, so the default is always prod.
+TABLE_PREFIX = os.environ.get("TABLE_PREFIX", "")
+TABLE_REGULAR = f"{TABLE_PREFIX}costco_reg_gas_by_loc"
+TABLE_PREMIUM = f"{TABLE_PREFIX}costco_prm_gas_by_loc"
+# costco_daily_avg is a VIEW derived from the two tables above, so nothing
+# writes to it. See supabase/migrations/*_costco_daily_avg_view.sql.
+
 API_URL = "https://www.costco.com/AjaxGetGasPricesService?warehouseid="
 
 WAREHOUSES = {
@@ -95,17 +103,8 @@ def scrape_all(warehouses):
 
 
 def _do_upload(client, regular_rows, premium_rows):
-    client.table("costco_reg_gas_by_loc").insert(regular_rows).execute()
-    client.table("costco_prm_gas_by_loc").insert(premium_rows).execute()
-
-    reg_prices = [r["price"] for r in regular_rows if r["price"] is not None]
-    prm_prices = [r["price"] for r in premium_rows if r["price"] is not None]
-    client.table("costco_daily_avg").insert({
-        "date": datetime.now(ZoneInfo("America/New_York")).date().isoformat(),
-        "avg_reg_price": sum(reg_prices) / len(reg_prices) if reg_prices else None,
-        "avg_prm_price": sum(prm_prices) / len(prm_prices) if prm_prices else None,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }).execute()
+    client.table(TABLE_REGULAR).insert(regular_rows).execute()
+    client.table(TABLE_PREMIUM).insert(premium_rows).execute()
 
 
 def upload(regular_rows, premium_rows, timeout=120, retry_delay=5):
@@ -132,6 +131,8 @@ def upload(regular_rows, premium_rows, timeout=120, retry_delay=5):
 
 
 if __name__ == "__main__":
+    print(f"Target: {'TEST' if TABLE_PREFIX else 'PROD'} "
+          f"({TABLE_REGULAR}, {TABLE_PREMIUM})")
     regular_rows, premium_rows = scrape_all(WAREHOUSES)
     print("Regular:")
     for r in regular_rows:

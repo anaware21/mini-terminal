@@ -4,6 +4,14 @@ on:
   schedule:
     - cron: '0 17 * * *'  # daily at noon EST (UTC-5)
   workflow_dispatch:       # allows manual trigger
+    inputs:
+      target:
+        description: 'Which tables to write to'
+        type: choice
+        options:
+          - test
+          - prod
+        default: test
 
 jobs:
   scrape:
@@ -18,10 +26,13 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r gas/requirements.txt
+        run: pip install -r data/gas/requirements.txt
 
       - name: Run scraper and upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python gas/upload.py
+          # Manual runs write to the test_ tables unless you pick "prod".
+          # The cron is not a workflow_dispatch, so it always gets '' (= prod).
+          TABLE_PREFIX: ${{ (github.event_name == 'workflow_dispatch' && inputs.target != 'prod') && 'test_' || '' }}
+        run: python data/gas/upload.py
