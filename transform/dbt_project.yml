@@ -1,0 +1,18 @@
+name: mini_terminal
+version: "1.0.0"
+profile: mini_terminal
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets: ["target", "dbt_packages", "logs"]
+
+models:
+  mini_terminal:
+    +materialized: view
+    # Write model/column descriptions from the .yml files to Postgres comments,
+    # so they show up in the Supabase table editor too.
+    +persist_docs:
+      relation: true
+      columns: true

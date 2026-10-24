@@ -1,0 +1,25 @@
+version: 2
+
+# Raw per-location tables written by data/gas/upload.py. Their DDL, RLS
+# policies and grants live in supabase/migrations/ -- dbt only reads them.
+#
+# TABLE_PREFIX works the same way as in the scraper: unset = prod tables,
+# "test_" = the test_ mirrors (manual workflow_dispatch runs).
+sources:
+  - name: gas
+    schema: public
+    config:
+      loaded_at_field: created_at
+      # The scraper still inserts a row when a warehouse fetch fails (with a
+      # null price), so only count rows that actually carry a price.
+      freshness:
+        warn_after: {count: 6, period: hour}
+        error_after: {count: 20, period: hour}
+        filter: price is not null
+    tables:
+      - name: costco_reg_gas_by_loc
+        identifier: "{{ env_var('TABLE_PREFIX', '') }}costco_reg_gas_by_loc"
+        description: Daily regular gas price per Costco warehouse.
+      - name: costco_prm_gas_by_loc
+        identifier: "{{ env_var('TABLE_PREFIX', '') }}costco_prm_gas_by_loc"
+        description: Daily premium gas price per Costco warehouse.
