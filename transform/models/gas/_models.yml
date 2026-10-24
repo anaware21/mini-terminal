@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: costco_daily_avg
+    description: >-
+      Daily network average Costco gas price, derived from the per-location
+      tables. The station_count columns report how many warehouses actually
+      reported that day -- a low count means a degraded scrape, not a real move.
+    columns:
+      - name: date
+        data_tests:
+          - unique
+          - not_null
+      - name: avg_reg_price
+        description: Average regular price across reporting warehouses (USD/gal).
+      - name: avg_prm_price
+        description: Average premium price across reporting warehouses (USD/gal).
+      - name: reg_station_count
+        description: Warehouses with a regular price that day.
+      - name: prm_station_count
+        description: Warehouses with a premium price that day.

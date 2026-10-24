@@ -16,6 +16,11 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    env:
+      # Manual runs write to the test_ tables unless you pick "prod".
+      # The cron is not a workflow_dispatch, so it always gets '' (= prod).
+      # Read by both the scraper and dbt.
+      TABLE_PREFIX: ${{ (github.event_name == 'workflow_dispatch' && inputs.target != 'prod') && 'test_' || '' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +33,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r data/gas/requirements.txt
 
-      - name: Run scraper and upload
+      - name: Run gas scraper and upload
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          # Manual runs write to the test_ tables unless you pick "prod".
-          # The cron is not a workflow_dispatch, so it always gets '' (= prod).
-          TABLE_PREFIX: ${{ (github.event_name == 'workflow_dispatch' && inputs.target != 'prod') && 'test_' || '' }}
         run: python data/gas/upload.py
+
+      - name: Install dbt
+        run: pip install -r transform/requirements.txt
+
+      # build = (re)create the views + run the data tests. Freshness runs last
+      # and fails the job if no priced rows landed recently -- i.e. the scrape
+      # above silently uploaded nothing.
+      - name: Build and test dbt models
+        working-directory: transform
+        env:
+          DBT_PROFILES_DIR: .
+          SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          dbt build
+          dbt source freshness

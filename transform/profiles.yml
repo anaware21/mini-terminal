@@ -1,0 +1,17 @@
+# Connection to the Supabase Postgres database. Everything comes from env vars
+# so this file is safe to commit. Use the *session pooler* connection details
+# from Supabase -> Connect (port 5432); the direct host is IPv6-only and
+# GitHub Actions runners can't reach it.
+mini_terminal:
+  target: supabase
+  outputs:
+    supabase:
+      type: postgres
+      host: "{{ env_var('SUPABASE_DB_HOST') }}"
+      port: "{{ env_var('SUPABASE_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('SUPABASE_DB_USER') }}"
+      password: "{{ env_var('SUPABASE_DB_PASSWORD') }}"
+      dbname: postgres
+      schema: public
+      threads: 4
+      sslmode: "{{ env_var('SUPABASE_DB_SSLMODE', 'require') }}"

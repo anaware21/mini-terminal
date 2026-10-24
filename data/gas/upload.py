@@ -17,7 +17,7 @@ TABLE_PREFIX = os.environ.get("TABLE_PREFIX", "")
 TABLE_REGULAR = f"{TABLE_PREFIX}costco_reg_gas_by_loc"
 TABLE_PREMIUM = f"{TABLE_PREFIX}costco_prm_gas_by_loc"
 # costco_daily_avg is a VIEW derived from the two tables above, so nothing
-# writes to it. See supabase/migrations/*_costco_daily_avg_view.sql.
+# writes to it. It's built by dbt: see transform/models/gas/costco_daily_avg.sql.
 
 API_URL = "https://www.costco.com/AjaxGetGasPricesService?warehouseid="
 
